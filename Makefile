@@ -1,26 +1,24 @@
-# ==== MyOS-AI Phase 2 Makefile ====
-TARGET = myos
+# ==== Compiler and Assembler settings ====
+CC = gcc
+AS = nasm
+LD = ld
+
+CFLAGS = -m32 -ffreestanding -O2 -Wall -Wextra -fno-builtin -Ikernel
+LDFLAGS = -m elf_i386
+TARGET = myos-ai
 ISO = $(TARGET).iso
 
-CC = gcc
-LD = ld
-AS = nasm
-CFLAGS = -m32 -ffreestanding -O2 -Wall -Wextra -fno-builtin
-LDFLAGS = -m elf_i386
-
-KERNEL_OBJS = kernel/kernel.o kernel/idt.o kernel/irq.o kernel/timer.o kernel/keyboard.o kernel/kprint.o kernel/memory.o
-ISR_OBJ = kernel/isr.o
 BOOT_OBJ = boot/boot.o
+KERNEL_OBJS = kernel/kernel.o kernel/idt.o kernel/irq.o kernel/timer.o kernel/keyboard.o kernel/kprint.o kernel/memory.o kernel/sched.o kernel/context_switch.o
+ISR_OBJ = kernel/isr.o
 IDT_FLUSH_OBJ = kernel/idt_flush.o
 
-# ==== Build all ====
-all: $(ISO)
+# ==== Build rules ====
+all: $(TARGET).bin
 
-# ==== Bootloader ====
 boot/boot.o: boot/boot.asm
-	$(AS) -f elf32 $< -o $@
+	$(AS) -f elf32 boot/boot.asm -o boot/boot.o
 
-# ==== Kernel object files ====
 kernel/kernel.o: kernel/kernel.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
@@ -41,6 +39,13 @@ kernel/kprint.o: kernel/kprint.c
 
 kernel/memory.o: kernel/memory.c
 	$(CC) $(CFLAGS) -c $< -o $@
+
+kernel/sched.o: kernel/sched.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# ✅ FIXED: use NASM for Intel syntax assembly
+kernel/context_switch.o: kernel/context_switch.S
+	nasm -f elf32 kernel/context_switch.S -o kernel/context_switch.o
 
 kernel/isr.o: kernel/isr.S
 	$(AS) -f elf32 kernel/isr.S -o kernel/isr.o
@@ -66,4 +71,3 @@ run: all
 # ==== Clean ====
 clean:
 	rm -rf *.o *.bin iso $(KERNEL_OBJS) $(ISR_OBJ) $(BOOT_OBJ) $(IDT_FLUSH_OBJ)
-
